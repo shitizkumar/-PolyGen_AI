@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Environment
+.env
+
+# Frontend
+node_modules/
+dist/
+build/
+
+# Generated 3D assets
+artifacts/*
+!artifacts/.gitkeep
+*.obj
+*.mtl
+*.glb
+*.gltf
+*.ply
+*.stl
+
+# IDE
+.vscode/
+.idea/
