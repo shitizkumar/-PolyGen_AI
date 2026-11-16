@@ -2,9 +2,9 @@
 
 from backend.config import PROJECT_ROOT
 from backend.schemas import (
-    PromptRequest,
     GenerationResponse,
     HealthResponse,
+    PromptRequest,
 )
 from generation_engine.text_to_3d import generate_mesh
 
@@ -18,29 +18,24 @@ app = FastAPI(
 
 @app.get("/health", response_model=HealthResponse)
 def health_check():
-    """Check backend availability."""
     return HealthResponse(
         status="ok",
         project="PolyGen AI",
     )
 
 
+@app.get("/generation/status")
+def generation_status():
+    return {
+        "available": False,
+        "model": "shap-e",
+        "message": "Model inference is not configured for this environment.",
+    }
+
+
 @app.post("/generate", response_model=GenerationResponse)
 def generate_asset(payload: PromptRequest):
-    """Generate a 3D asset from a text prompt."""
-    try:
-        model_path = generate_mesh(payload.prompt)
-
-        relative_path = model_path.relative_to(PROJECT_ROOT)
-
-        return GenerationResponse(
-            status="completed",
-            message="3D asset generated and validated successfully.",
-            model_path=relative_path.as_posix(),
-        )
-
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=f"3D generation failed: {exc}",
-        ) from exc
+    raise HTTPException(
+        status_code=503,
+        detail="Text-to-3D generation is not available yet.",
+    )

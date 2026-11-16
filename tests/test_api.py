@@ -16,26 +16,22 @@ def test_health_endpoint():
     }
 
 
-def test_generate_endpoint_success(monkeypatch):
-    expected_path = PROJECT_ROOT / "artifacts" / "test_model.obj"
+def test_generation_status():
+    response = client.get("/generation/status")
 
-    def mock_generate_mesh(prompt):
-        assert prompt == "A medieval sword"
-        return expected_path
+    assert response.status_code == 200
+    assert response.json()["available"] is False
+    assert response.json()["model"] == "shap-e"
 
-    monkeypatch.setattr(
-        "backend.main.generate_mesh",
-        mock_generate_mesh,
-    )
 
+def test_generate_unavailable():
     response = client.post(
         "/generate",
         json={"prompt": "A medieval sword"},
     )
 
-    assert response.status_code == 200
-    assert response.json()["status"] == "completed"
-    assert response.json()["model_path"] == "artifacts/test_model.obj"
+    assert response.status_code == 503
+    assert "not available" in response.json()["detail"]
 
 
 def test_generate_endpoint_rejects_invalid_prompt():
@@ -47,19 +43,3 @@ def test_generate_endpoint_rejects_invalid_prompt():
     assert response.status_code == 422
 
 
-def test_generate_endpoint_handles_generation_error(monkeypatch):
-    def mock_generate_mesh(prompt):
-        raise RuntimeError("Model generation failed")
-
-    monkeypatch.setattr(
-        "backend.main.generate_mesh",
-        mock_generate_mesh,
-    )
-
-    response = client.post(
-        "/generate",
-        json={"prompt": "A medieval sword"},
-    )
-
-    assert response.status_code == 500
-    assert "3D generation failed" in response.json()["detail"]
