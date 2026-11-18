@@ -85,6 +85,13 @@ class RemoteStableDiffusionProvider:
             raise TypeError("A configured remote transport callable is required.")
         self._transport = transport
 
+    @classmethod
+    def from_env(cls) -> "RemoteStableDiffusionProvider":
+        """Configure the AUTOMATIC1111 HTTPS transport from the environment."""
+        from texture_engine.http_transport import StableDiffusionHTTPTransport
+
+        return cls(StableDiffusionHTTPTransport())
+
     def generate(self, request: TextureRequest) -> bytes:
         _reject_depth(request)
         return self._transport(request)

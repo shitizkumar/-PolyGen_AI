@@ -4,7 +4,9 @@ This stage does not unwrap UVs, bake textures, or modify mesh materials.
 Providers are explicitly selected; there is no default synthetic fallback.
 """
 
+import os
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from uuid import uuid4
 
 from backend.config import ARTIFACTS_DIR
@@ -39,13 +41,21 @@ class TextureEngine:
             raise TextureError(f"Texture provider '{self.provider.name}' failed.") from exc
         width, height = validate_png(data)
         # A fixed prefix and UUID prevent prompt traversal, reserved names and
-        # collisions. Exclusive creation refuses existing files and symlinks.
+        # collisions. Linking the complete file refuses existing destinations.
         prefix = "test_texture" if self.provider.is_test_provider else "texture"
         path = self.output_dir / f"{prefix}_{uuid4().hex}.png"
         try:
             self.output_dir.mkdir(parents=True, exist_ok=True)
-            with path.open("xb") as output:
-                output.write(data)
+            output = NamedTemporaryFile(dir=self.output_dir, suffix=".tmp", delete=False)
+            temporary_path = Path(output.name)
+            try:
+                with output:
+                    output.write(data)
+                    output.flush()
+                    os.fsync(output.fileno())
+                os.link(temporary_path, path)
+            finally:
+                temporary_path.unlink()
         except OSError as exc:
             raise TextureError("Unable to save the texture PNG.") from exc
         return TextureResult(
