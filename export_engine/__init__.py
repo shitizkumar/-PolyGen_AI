@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 from uuid import uuid4
 
 from backend.config import ARTIFACTS_DIR
+from export_engine.glb import TexturedGlb, export_textured_glb
 from mesh_processing import load_uv_mesh
 from texture_engine.validation import MAX_PNG_BYTES, validate_png
 

@@ -1,7 +1,8 @@
 import { Suspense, useMemo, useRef, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useLoader } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { Box3, MeshStandardMaterial, Vector3 } from "three";
 
 function SampleModel() {
@@ -58,7 +59,28 @@ function ObjModel({ source }) {
   );
 }
 
-export default function ModelViewer({ objSource = null }) {
+function GlbModel({ url }) {
+  const { scene } = useLoader(GLTFLoader, url);
+  const { center, scale } = useMemo(() => {
+    const bounds = new Box3().setFromObject(scene);
+    const size = bounds.getSize(new Vector3());
+    const maxDimension = Math.max(size.x, size.y, size.z);
+    if (!Number.isFinite(maxDimension) || maxDimension <= 0) {
+      throw new Error("The GLB file has no usable geometry.");
+    }
+    return { center: bounds.getCenter(new Vector3()).negate(), scale: 2.8 / maxDimension };
+  }, [scene]);
+
+  return (
+    <group scale={scale}>
+      <group position={center}>
+        <primitive object={scene} />
+      </group>
+    </group>
+  );
+}
+
+export default function ModelViewer({ objSource = null, glbUrl = null }) {
   const controlsRef = useRef(null);
   const [autoRotate, setAutoRotate] = useState(false);
 
@@ -88,7 +110,9 @@ export default function ModelViewer({ objSource = null }) {
         <directionalLight position={[-4, 2, -3]} intensity={1} />
 
         <Suspense fallback={null}>
-          {objSource ? (
+          {glbUrl ? (
+            <GlbModel url={glbUrl} />
+          ) : objSource ? (
             <ObjModel source={objSource} />
           ) : (
             <SampleModel />

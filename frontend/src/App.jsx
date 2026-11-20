@@ -1,8 +1,23 @@
-import { useEffect, useState } from "react";
+import { Component, useEffect, useState } from "react";
 import ModelViewer from "./components/ModelViewer";
 import "./App.css";
 
 const MAX_OBJ_SIZE = 10 * 1024 * 1024;
+const GLB_ENDPOINT = "/api/artifacts/glb";
+
+class PreviewBoundary extends Component {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    return this.state.failed ? (
+      <p role="alert">The selected model could not be previewed.</p>
+    ) : this.props.children;
+  }
+}
 
 function App() {
   const [backendStatus, setBackendStatus] = useState("Checking...");
@@ -14,6 +29,35 @@ function App() {
   const [objSource, setObjSource] = useState(null);
   const [fileName, setFileName] = useState("");
   const [fileError, setFileError] = useState("");
+  const [glbFiles, setGlbFiles] = useState([]);
+  const [glbName, setGlbName] = useState("");
+  const [glbError, setGlbError] = useState(false);
+  const glbUrl = glbName ? `${GLB_ENDPOINT}/${encodeURIComponent(glbName)}` : null;
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function refreshGlbs() {
+      try {
+        const response = await fetch(GLB_ENDPOINT, { signal: controller.signal });
+        if (!response.ok) throw new Error("GLB exports unavailable");
+        const files = await response.json();
+        if (controller.signal.aborted) return;
+        setGlbFiles(files);
+        setGlbName((name) => files.includes(name) ? name : "");
+        setGlbError(false);
+      } catch {
+        if (!controller.signal.aborted) setGlbError(true);
+      }
+    }
+
+    refreshGlbs();
+    const interval = setInterval(refreshGlbs, 10000);
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -96,6 +140,7 @@ function App() {
 
       setObjSource(content);
       setFileName(file.name);
+      setGlbName("");
     } catch (error) {
       setFileError(error.message);
     }
@@ -162,6 +207,7 @@ function App() {
               className="secondary-button"
               onClick={() => {
                 setObjSource(null);
+                setGlbName("");
                 setFileName("");
                 setFileError("");
               }}
@@ -169,13 +215,33 @@ function App() {
               Show Sample Model
             </button>
           </div>
+
+          <div className="upload-section">
+            <label htmlFor="glb-export">Exported GLB</label>
+            <select
+              id="glb-export"
+              value={glbName}
+              onChange={(event) => setGlbName(event.target.value)}
+            >
+              <option value="">{glbFiles.length ? "Select a GLB" : "No GLBs available"}</option>
+              {glbFiles.map((name) => <option key={name} value={name}>{name}</option>)}
+            </select>
+            {glbError && <p role="status">Could not load the GLB export list.</p>}
+            {glbUrl && <p><a href={`${glbUrl}?download=true`} download={glbName}>Download GLB</a></p>}
+          </div>
         </div>
 
         <div className="viewer-panel">
           <h2>3D Preview</h2>
 
           <div className="viewer">
-            <ModelViewer objSource={objSource} />
+            {glbUrl ? (
+              <PreviewBoundary key={glbUrl}>
+                <ModelViewer glbUrl={glbUrl} />
+              </PreviewBoundary>
+            ) : (
+              <ModelViewer objSource={objSource} />
+            )}
           </div>
 
           <p>Left drag: Rotate | Right drag: Pan | Scroll: Zoom</p>

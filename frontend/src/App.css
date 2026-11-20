@@ -183,6 +183,22 @@ header p {
   cursor: pointer;
 }
 
+.upload-section select {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #58658b;
+  border-radius: 8px;
+  background: #0e1730;
+  color: #dce3ff;
+  font: inherit;
+}
+
+.upload-section a {
+  color: #c7baff;
+}
+
 .upload-section .secondary-button {
   width: auto;
   padding: 11px 16px;
